@@ -1,26 +1,156 @@
+/* ─── Google Fonts (must precede other rules) ─────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ─── Tailwind 4 theme tokens ───────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand colours */
+  --color-ink:       #1E2A4A;
+  --color-ink-dark:  #131C33;
+  --color-marigold:  #E8A33D;
+  --color-marigold-light: #FDF3E3;
+  --color-paper:     #FAF8F4;
+  --color-moss:      #4C7A5E;
+  --color-moss-light: #EBF4EF;
+  --color-brick:     #B4483A;
+  --color-brick-light: #FBECEB;
+  --color-slate:     #33363D;
+
+  /* Fonts */
+  --font-heading: "Fraunces", Georgia, serif;
+  --font-sans:    "Inter", system-ui, sans-serif;
+  --font-mono:    "IBM Plex Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ───────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  min-height: 100%;
+  background-color: #FAF8F4;
+  color: #1E2A4A;
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Subtle background texture pattern */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(#1E2A4A 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Typography Classes ────────────────────────────────────────────── */
+.font-heading {
+  font-family: "Fraunces", Georgia, serif;
+}
+
+.font-mono {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+}
+
+/* ─── Glassmorphism & Card Styles ───────────────────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 54, 61, 0.12);
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(51, 54, 61, 0.08);
+}
+
+.glass-card-dark {
+  background: linear-gradient(135deg, #1E2A4A 0%, #162038 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ─── Holographic / Premium Sheen Effect for ID Cards ──────────────── */
+.hologram-foil {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(232, 163, 61, 0.15) 25%,
+    rgba(76, 122, 94, 0.15) 50%,
+    rgba(96, 165, 250, 0.15) 75%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  background-size: 200% 200%;
+  animation: holoShift 6s ease infinite;
+}
+
+@keyframes holoShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ─── 3D Card Flip Perspective ───────────────────────────────────────── */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* ─── Scanner Laser Animation ───────────────────────────────────────── */
+@keyframes laserSweep {
+  0% { top: 4%; opacity: 0.8; }
+  50% { top: 92%; opacity: 1; }
+  100% { top: 4%; opacity: 0.8; }
+}
+
+.animate-laser {
+  animation: laserSweep 2s ease-in-out infinite;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.4; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 3s ease-in-out infinite;
+}
+
+/* ─── Skeleton Loading ──────────────────────────────────────────────── */
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #EAE8E3 25%, #F5F3ED 50%, #EAE8E3 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* ─── Scrollbars ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(51, 54, 61, 0.2); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(51, 54, 61, 0.4); }
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
