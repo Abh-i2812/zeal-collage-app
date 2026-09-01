@@ -10,6 +10,9 @@ export interface QRPayload {
   subject: string;
   teacherId: string;
   room: string;
+  latitude?: number;
+  longitude?: number;
+  radiusM?: number;
   tokenIndex: number;
   createdAt: number; // Unix timestamp in seconds
   expiresAt: number; // Unix timestamp in seconds
@@ -21,6 +24,9 @@ export interface AttendanceSession {
   subject: string;
   teacherId: string;
   room: string;
+  latitude?: number;
+  longitude?: number;
+  geofenceRadiusM?: number;
   createdAt: number; // Unix timestamp in seconds
   expiresAt: number; // Overall session expiry
   status: "active" | "closed";

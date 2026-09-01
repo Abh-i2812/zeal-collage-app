@@ -17,7 +17,7 @@ export function AttendanceResult({
   // Auto-return on success after 2 seconds
   useEffect(() => {
     if (result.status === "VALID" && onAutoReturn) {
-      const timer = setTimeout(onAutoReturn, 2000);
+      const timer = setTimeout(onAutoReturn, 1200);
       return () => clearTimeout(timer);
     }
   }, [result.status, onAutoReturn]);
@@ -59,7 +59,7 @@ export function AttendanceResult({
         </div>
 
         <p className="text-xs text-white/60 mt-6 animate-pulse">
-          Returning to dashboard in 2s…
+          Returning to dashboard in 1s…
         </p>
       </div>
     );

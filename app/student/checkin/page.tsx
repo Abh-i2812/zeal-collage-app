@@ -7,9 +7,10 @@ import { students } from "@/lib/mockDb";
 import { useLocale } from "@/lib/locales";
 import { validateScannedQR } from "@/lib/qr/qrValidator";
 import { recordStudentCheckIn } from "@/lib/qr/qrSession";
-import { ValidationResult } from "@/lib/qr/qrTypes";
+import { ValidationResult, QRPayload } from "@/lib/qr/qrTypes";
 import { QRScanner } from "@/components/qr/QRScanner";
 import { AttendanceResult } from "@/components/qr/AttendanceResult";
+import { calculateHaversineDistance } from "@/lib/geo/haversine";
 
 export default function CheckInPage() {
   const router = useRouter();
@@ -28,14 +29,51 @@ export default function CheckInPage() {
 
   const handleScan = useCallback(
     (decodedText: string) => {
-      // Step 1: Validate payload
       const result = validateScannedQR(decodedText, studentId);
-      setValidationResult(result);
 
-      // Step 2: If valid, save to localStorage
       if (result.valid && result.payload) {
+        const payload = result.payload as QRPayload;
+        const hasLocation = typeof payload.latitude === "number" && typeof payload.longitude === "number";
+
+        if (hasLocation && typeof navigator !== "undefined" && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const distanceM = calculateHaversineDistance(
+                { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+                { latitude: payload.latitude!, longitude: payload.longitude! }
+              );
+              const allowedRadiusM = payload.radiusM ?? 5;
+
+              if (distanceM > allowedRadiusM) {
+                setValidationResult({
+                  valid: false,
+                  status: "INVALID_FORMAT",
+                  payload,
+                  errorMessage: `You are ${Math.round(distanceM)}m away from the classroom geofence (${allowedRadiusM}m allowed).`,
+                });
+                return;
+              }
+
+              recordStudentCheckIn(payload, studentId, studentName, "qr-camera");
+              setValidationResult(result);
+            },
+            () => {
+              setValidationResult({
+                valid: false,
+                status: "INVALID_FORMAT",
+                payload,
+                errorMessage: "Location permission is required to mark attendance inside the classroom geofence.",
+              });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+          return;
+        }
+
         recordStudentCheckIn(result.payload, studentId, studentName, "qr-camera");
       }
+
+      setValidationResult(result);
     },
     [studentId, studentName]
   );

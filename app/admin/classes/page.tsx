@@ -31,8 +31,8 @@ interface BulkImportResult {
 }
 
 const DEMO_CLASSES: ClassRecord[] = [
-  { id: "c1", code: "CS301", name: "Data Structures (SYCO Div A)", semester: 3, latitude: 18.4485, longitude: 73.834, geofenceRadiusM: 100, teacherName: "Dr. Meera Joshi", enrolledCount: 5 },
-  { id: "c2", code: "CS302", name: "Database Systems (SYCO Div B)", semester: 3, latitude: 18.4485, longitude: 73.834, geofenceRadiusM: 100, teacherName: "Dr. Anand Kulkarni", enrolledCount: 5 },
+  { id: "c1", code: "CS301", name: "Data Structures (SYCO Div A)", semester: 3, latitude: 18.4485, longitude: 73.834, geofenceRadiusM: 5, teacherName: "Dr. Meera Joshi", enrolledCount: 5 },
+  { id: "c2", code: "CS302", name: "Database Systems (SYCO Div B)", semester: 3, latitude: 18.4485, longitude: 73.834, geofenceRadiusM: 5, teacherName: "Dr. Anand Kulkarni", enrolledCount: 5 },
 ];
 
 export default function AdminClassesPage() {
@@ -43,7 +43,7 @@ export default function AdminClassesPage() {
 
   // Create class form
   const [showCreate, setShowCreate] = useState(false);
-  const [newClass, setNewClass] = useState({ code: "", name: "", semester: "3", geofenceRadiusM: "100", latitude: "", longitude: "" });
+  const [newClass, setNewClass] = useState({ code: "", name: "", semester: "3", geofenceRadiusM: "5", latitude: "", longitude: "" });
   const [creatingClass, setCreatingClass] = useState(false);
   const [capturingGPS, setCapturingGPS] = useState(false);
 
@@ -117,7 +117,7 @@ export default function AdminClassesPage() {
           semester: parseInt(newClass.semester) || null,
           latitude: newClass.latitude ? parseFloat(newClass.latitude) : null,
           longitude: newClass.longitude ? parseFloat(newClass.longitude) : null,
-          geofenceRadiusM: parseInt(newClass.geofenceRadiusM) || 100,
+          geofenceRadiusM: parseInt(newClass.geofenceRadiusM) || 5,
         }),
       });
       const data = await res.json();
@@ -136,7 +136,7 @@ export default function AdminClassesPage() {
           semester: parseInt(newClass.semester) || null,
           latitude: newClass.latitude ? parseFloat(newClass.latitude) : null,
           longitude: newClass.longitude ? parseFloat(newClass.longitude) : null,
-          geofenceRadiusM: parseInt(newClass.geofenceRadiusM) || 100,
+          geofenceRadiusM: parseInt(newClass.geofenceRadiusM) || 5,
           teacherName: "Unassigned",
           enrolledCount: 0,
         };

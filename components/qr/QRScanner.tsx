@@ -52,15 +52,19 @@ export function QRScanner({ onScan, className = "" }: QRScannerProps) {
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
+            fps: 15,
+            qrbox: { width: 260, height: 260 },
             aspectRatio: 1.0,
+            disableFlip: false,
           },
           (decodedText) => {
             if (isScanningRef.current) return;
             isScanningRef.current = true;
             playBeep();
             onScan(decodedText);
+            window.setTimeout(() => {
+              isScanningRef.current = false;
+            }, 900);
           },
           () => {
             // Frame parse error — ignore

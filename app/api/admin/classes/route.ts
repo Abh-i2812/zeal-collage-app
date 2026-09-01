@@ -57,7 +57,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, name, semester, latitude, longitude, geofenceRadiusM = 100, collegeId, departmentId } = body;
+    const { code, name, semester, latitude, longitude, geofenceRadiusM = 5, collegeId, departmentId } = body;
 
     if (!name || !code) {
       return NextResponse.json({ error: "Class name and code are required" }, { status: 400 });

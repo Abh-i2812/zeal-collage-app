@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const classLat = (sessionData?.classes as unknown as { latitude: number })?.latitude || 18.4485;
     const classLng = (sessionData?.classes as unknown as { longitude: number })?.longitude || 73.8340;
-    const geofenceRadius = (sessionData?.classes as unknown as { geofence_radius_m: number })?.geofence_radius_m || 100;
+    const geofenceRadius = (sessionData?.classes as unknown as { geofence_radius_m: number })?.geofence_radius_m || 5;
     const sessionEndsAt = sessionData?.ends_at ? Math.floor(new Date(sessionData.ends_at).getTime() / 1000) : nowSec + 360;
 
     // ── 2. Construct or Parse HMAC Signed Token Payload ──────────────────

@@ -13,6 +13,7 @@ import {
 
 const TOKEN_WINDOW_SECONDS = 30;
 const SESSION_DURATION_SECONDS = 2 * 60 * 60; // 2 hours
+const DEFAULT_GEOFENCE_RADIUS_M = 5;
 
 /** Generate structured Session ID: SES-YYYYMMDD-HHMMSS */
 export function generateSessionId(): string {
@@ -32,7 +33,10 @@ export function createAttendanceSession(
   subjectId: string,
   subjectName: string,
   teacherId: string,
-  room: string
+  room: string,
+  latitude = 18.4485,
+  longitude = 73.834,
+  geofenceRadiusM = DEFAULT_GEOFENCE_RADIUS_M
 ): AttendanceSession {
   const now = Math.floor(Date.now() / 1000);
   const sessionId = generateSessionId();
@@ -43,6 +47,9 @@ export function createAttendanceSession(
     subject: subjectName,
     teacherId,
     room,
+    latitude,
+    longitude,
+    geofenceRadiusM,
     createdAt: now,
     expiresAt: now + SESSION_DURATION_SECONDS,
     status: "active",
@@ -90,6 +97,9 @@ export function getCurrentQRPayload(session: AttendanceSession): QRPayload {
     subject: session.subject,
     teacherId: session.teacherId,
     room: session.room,
+    latitude: session.latitude,
+    longitude: session.longitude,
+    radiusM: session.geofenceRadiusM ?? DEFAULT_GEOFENCE_RADIUS_M,
     tokenIndex: session.tokenIndex || 1,
     createdAt: session.activeTokenCreatedAt,
     expiresAt: session.activeTokenExpiresAt,

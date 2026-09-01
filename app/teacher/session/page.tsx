@@ -76,11 +76,54 @@ export default function TeacherSessionPage() {
   }, [session]);
 
   const handleStartSession = () => {
+    let latitude = 18.4485;
+    let longitude = 73.834;
+    let radiusM = 5;
+
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+          radiusM = 5;
+          const newSession = createAttendanceSession(
+            subjectId,
+            subject?.name ?? "Database Management Systems",
+            "TCH001",
+            room,
+            latitude,
+            longitude,
+            radiusM
+          );
+          setSession(newSession);
+          showToast("Attendance session started with live room GPS lock (5m geofence).", "success");
+        },
+        () => {
+          const newSession = createAttendanceSession(
+            subjectId,
+            subject?.name ?? "Database Management Systems",
+            "TCH001",
+            room,
+            latitude,
+            longitude,
+            radiusM
+          );
+          setSession(newSession);
+          showToast("Attendance session started using default classroom GPS coordinates (5m geofence).", "success");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+      return;
+    }
+
     const newSession = createAttendanceSession(
       subjectId,
       subject?.name ?? "Database Management Systems",
       "TCH001",
-      room
+      room,
+      latitude,
+      longitude,
+      radiusM
     );
     setSession(newSession);
     showToast("Attendance session started. Real dynamic QR generated!", "success");
@@ -170,6 +213,9 @@ export default function TeacherSessionPage() {
           </h1>
           <p className="text-xs text-[#33363D]/60 mt-0.5">
             {room} · Third Year (Div A) · Batch A1 &amp; A2
+          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#1E2A4A]/70 mt-2">
+            {session ? `GPS lock: ${session.latitude?.toFixed(4) ?? "18.4485"}, ${session.longitude?.toFixed(4) ?? "73.8340"} · ${session.geofenceRadiusM ?? 5}m geofence` : "Location-embedded QR · 5m classroom radius"}
           </p>
         </div>
 
