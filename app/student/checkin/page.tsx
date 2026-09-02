@@ -11,15 +11,20 @@ import { ValidationResult, QRPayload } from "@/lib/qr/qrTypes";
 import { QRScanner } from "@/components/qr/QRScanner";
 import { AttendanceResult } from "@/components/qr/AttendanceResult";
 import { calculateHaversineDistance } from "@/lib/geo/haversine";
+import { getLiveSession, subscribeToLiveSession } from "@/lib/qr/liveSessionState";
 
 export default function CheckInPage() {
   const router = useRouter();
   const { t } = useLocale();
   const [mounted, setMounted] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [liveSession, setLiveSession] = useState<ReturnType<typeof getLiveSession> | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    setLiveSession(getLiveSession());
+    const unsubscribe = subscribeToLiveSession((session) => setLiveSession(session));
+    return unsubscribe;
   }, []);
 
   const session = getSession();
@@ -123,7 +128,10 @@ export default function CheckInPage() {
       </div>
 
       {/* ── Bottom Info ─────────────────────────────────────────────── */}
-      <div className="w-full max-w-sm mx-auto text-center pb-2">
+      <div className="w-full max-w-sm mx-auto text-center pb-2 space-y-2">
+        <p className="text-[11px] text-[#DDE6FF] font-semibold">
+          {liveSession ? `${liveSession.subject} • ${liveSession.room}` : "Waiting for the teacher to start a live lecture session..."}
+        </p>
         <p className="text-[11px] text-white/50 leading-relaxed">
           Point your camera at the teacher&apos;s active 30s QR code. Duplicate scans are automatically prevented.
         </p>

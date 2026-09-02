@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 export default function CheckinAliasPage() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/scan");
+    router.replace("/student/checkin");
   }, [router]);
 
   return null;

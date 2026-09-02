@@ -22,6 +22,7 @@ import { QRCodeDisplay } from "@/components/qr/QRCodeDisplay";
 import { QRCountdown } from "@/components/qr/QRCountdown";
 import { QRStatus } from "@/components/qr/QRStatus";
 import { exportSessionAttendanceToExcel } from "@/lib/excelExport";
+import { getLiveSession, setLiveSession, subscribeToLiveSession } from "@/lib/qr/liveSessionState";
 
 export default function TeacherSessionPage() {
   const searchParams = useSearchParams();
@@ -40,7 +41,17 @@ export default function TeacherSessionPage() {
   // Initialize roster from mockDb
   useEffect(() => {
     setMounted(true);
+    const liveSession = getLiveSession();
+    if (liveSession) {
+      setSession(liveSession);
+    }
     setRoster(getSessionRoster(subjectId));
+
+    const unsubscribe = subscribeToLiveSession((liveSession) => {
+      setSession(liveSession ?? null);
+    });
+
+    return unsubscribe;
   }, [subjectId]);
 
   // Sync roster with real localStorage attendance records every second
@@ -51,6 +62,7 @@ export default function TeacherSessionPage() {
       const liveSession = getSessionById(session.sessionId);
       if (liveSession) {
         setSession(liveSession);
+        setLiveSession(liveSession);
 
         // Update roster with present students
         setRoster((prev) =>
@@ -96,6 +108,7 @@ export default function TeacherSessionPage() {
             radiusM
           );
           setSession(newSession);
+          setLiveSession(newSession);
           showToast("Attendance session started with live room GPS lock (5m geofence).", "success");
         },
         () => {
@@ -109,6 +122,7 @@ export default function TeacherSessionPage() {
             radiusM
           );
           setSession(newSession);
+          setLiveSession(newSession);
           showToast("Attendance session started using default classroom GPS coordinates (5m geofence).", "success");
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -126,6 +140,7 @@ export default function TeacherSessionPage() {
       radiusM
     );
     setSession(newSession);
+    setLiveSession(newSession);
     showToast("Attendance session started. Real dynamic QR generated!", "success");
   };
 
@@ -134,6 +149,7 @@ export default function TeacherSessionPage() {
     const updated = rotateSessionToken(session.sessionId);
     if (updated) {
       setSession({ ...updated });
+      setLiveSession(updated);
     }
   }, [session]);
 
@@ -142,6 +158,7 @@ export default function TeacherSessionPage() {
     const closed = closeAttendanceSession(session.sessionId);
     if (closed) {
       setSession({ ...closed });
+      setLiveSession(null);
       showToast("Attendance session closed successfully.", "info");
     }
   };

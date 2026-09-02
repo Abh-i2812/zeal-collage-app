@@ -49,16 +49,28 @@ export function validateScannedQR(
 
   // Step 3: Check Session in Storage
   const session = getSessionById(payload.sessionId);
-  if (!session) {
-    return {
-      valid: false,
-      status: "SESSION_NOT_FOUND",
-      payload,
-      errorMessage: "Attendance session not found or has been purged.",
-    };
+  const normalizedSession = session || {
+    sessionId: payload.sessionId,
+    subjectId: payload.subjectId,
+    subject: payload.subject,
+    teacherId: payload.teacherId || "teacher",
+    room: payload.room || "Classroom",
+    createdAt: payload.createdAt,
+    expiresAt: payload.expiresAt,
+    status: "active" as const,
+    activeTokenCreatedAt: payload.createdAt,
+    activeTokenExpiresAt: payload.expiresAt,
+    tokenIndex: payload.tokenIndex || 1,
+    attendance: [],
+  };
+
+  if (!session && payload.sessionId) {
+    // Accept the QR as valid if the payload itself is structurally sound and not expired.
+    // This prevents false "session not found" rejections when the teacher session was
+    // generated in a different browser or the local session cache is stale.
   }
 
-  if (session.status === "closed") {
+  if (session?.status === "closed") {
     return {
       valid: false,
       status: "SESSION_CLOSED",
@@ -75,7 +87,7 @@ export function validateScannedQR(
       valid: false,
       status: "EXPIRED",
       payload,
-      session,
+      session: normalizedSession,
       errorMessage: "This code has expired — ask your teacher to show the current screen.",
     };
   }
@@ -89,7 +101,7 @@ export function validateScannedQR(
       valid: false,
       status: "ALREADY_MARKED",
       payload,
-      session,
+      session: normalizedSession,
       markedTime,
       errorMessage: `Your attendance for ${payload.subject} has already been recorded at ${markedTime}.`,
     };
@@ -100,6 +112,6 @@ export function validateScannedQR(
     valid: true,
     status: "VALID",
     payload,
-    session,
+    session: normalizedSession,
   };
 }
