@@ -16,6 +16,15 @@ export interface QRPayload {
   tokenIndex: number;
   createdAt: number; // Unix timestamp in seconds
   expiresAt: number; // Unix timestamp in seconds
+  /** Server-issued token. Omitted by the local demo fallback. */
+  signedToken?: {
+    sessionId: string;
+    seq: number;
+    iat: number;
+    exp: number;
+    nonce: string;
+    signature: string;
+  };
 }
 
 export interface AttendanceSession {
@@ -35,6 +44,7 @@ export interface AttendanceSession {
   tokenIndex: number; // Increments every 30s (Token #1, #2, ...)
   attendance: string[]; // List of student IDs marked present
   flaggedDevices?: Record<string, string[]>; // studentId -> list of deviceIds
+  signedToken?: QRPayload["signedToken"];
 }
 
 export interface StoredAttendanceRecord {

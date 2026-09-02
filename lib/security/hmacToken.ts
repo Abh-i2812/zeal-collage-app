@@ -20,12 +20,11 @@ export function generateSignedToken(
   sessionId: string,
   tokenSecret: string,
   seq: number,
-  validSeconds = 12
+  validSeconds = 12,
+  nonce = crypto.randomBytes(6).toString("hex")
 ): SignedQRPayload {
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + validSeconds;
-  const nonce = crypto.randomBytes(6).toString("hex");
-
   const message = `${sessionId}.${seq}.${iat}.${exp}.${nonce}`;
   const signature = crypto
     .createHmac("sha256", tokenSecret)

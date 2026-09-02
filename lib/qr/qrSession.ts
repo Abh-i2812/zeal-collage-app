@@ -103,6 +103,7 @@ export function getCurrentQRPayload(session: AttendanceSession): QRPayload {
     tokenIndex: session.tokenIndex || 1,
     createdAt: session.activeTokenCreatedAt,
     expiresAt: session.activeTokenExpiresAt,
+    signedToken: session.signedToken,
   };
 }
 

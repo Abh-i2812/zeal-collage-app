@@ -4,12 +4,25 @@
 // ─────────────────────────────────────────────────────────────────────
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zcoer-attendance.supabase.co";
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "demo_service_key";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export function isSupabaseConfigured(): boolean {
+  return Boolean(
+    supabaseUrl &&
+      serviceRoleKey &&
+      !serviceRoleKey.includes("your-") &&
+      !serviceRoleKey.includes("******") &&
+      serviceRoleKey.length > 40
+  );
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getAdminSupabase(): any {
-  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+  if (!isSupabaseConfigured()) {
+    throw new Error("SUPABASE_NOT_CONFIGURED");
+  }
+  return createSupabaseClient(supabaseUrl!, serviceRoleKey!, {
     auth: {
       persistSession: false,
     },

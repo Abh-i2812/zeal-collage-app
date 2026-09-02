@@ -10,8 +10,8 @@ import { recordStudentCheckIn } from "@/lib/qr/qrSession";
 import { ValidationResult, QRPayload } from "@/lib/qr/qrTypes";
 import { QRScanner } from "@/components/qr/QRScanner";
 import { AttendanceResult } from "@/components/qr/AttendanceResult";
-import { calculateHaversineDistance } from "@/lib/geo/haversine";
 import { getLiveSession, subscribeToLiveSession } from "@/lib/qr/liveSessionState";
+import { getOrCreateDeviceId } from "@/lib/qr/qrStorage";
 
 export default function CheckInPage() {
   const router = useRouter();
@@ -23,8 +23,22 @@ export default function CheckInPage() {
   useEffect(() => {
     setMounted(true);
     setLiveSession(getLiveSession());
+    const refreshServerSession = async () => {
+      try {
+        const response = await fetch("/api/session/current", { cache: "no-store" });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.session) setLiveSession(data.session);
+      } catch {
+        // localStorage fallback is still available when Supabase is offline.
+      }
+    };
+    void refreshServerSession();
+    const poll = window.setInterval(refreshServerSession, 5000);
     const unsubscribe = subscribeToLiveSession((session) => setLiveSession(session));
-    return unsubscribe;
+    return () => {
+      window.clearInterval(poll);
+      unsubscribe();
+    };
   }, []);
 
   const session = getSession();
@@ -38,29 +52,61 @@ export default function CheckInPage() {
 
       if (result.valid && result.payload) {
         const payload = result.payload as QRPayload;
-        const hasLocation = typeof payload.latitude === "number" && typeof payload.longitude === "number";
-
-        if (hasLocation && typeof navigator !== "undefined" && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const distanceM = calculateHaversineDistance(
-                { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
-                { latitude: payload.latitude!, longitude: payload.longitude! }
-              );
-              const allowedRadiusM = payload.radiusM ?? 5;
-
-              if (distanceM > allowedRadiusM) {
+        const submitToServer = (latitude?: number, longitude?: number, accuracy?: number) => {
+          const deviceId = getOrCreateDeviceId();
+          const deviceCookie = fetch("/api/device", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ deviceId }),
+          }).catch(() => undefined);
+          void deviceCookie.then(() => fetch("/api/verify-scan", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              sessionId: payload.sessionId,
+              signedToken: payload.signedToken,
+              deviceId,
+              studentId,
+              latitude,
+              longitude,
+              gpsAccuracyM: accuracy ?? 20,
+            }),
+          }))
+            .then(async (response) => {
+              const serverResult = await response.json().catch(() => null);
+              if (!response.ok && serverResult?.code !== "schema_unavailable") {
+                const reason = serverResult?.reasonCode || "server_error";
                 setValidationResult({
                   valid: false,
-                  status: "INVALID_FORMAT",
+                  status: reason === "session_closed" ? "SESSION_CLOSED" : reason === "token_expired" ? "EXPIRED" : "INVALID_FORMAT",
                   payload,
-                  errorMessage: `You are ${Math.round(distanceM)}m away from the classroom geofence (${allowedRadiusM}m allowed).`,
+                  errorMessage: serverResult?.message || "Attendance verification failed. Please try again.",
                 });
                 return;
               }
-
+              if (response.ok && serverResult?.success) {
+                setValidationResult({
+                  valid: serverResult.status !== "already_marked",
+                  status: serverResult.status === "already_marked" ? "ALREADY_MARKED" : "VALID",
+                  payload,
+                  errorMessage: serverResult.message,
+                });
+                return;
+              }
+              // No schema/configuration: preserve the offline/demo experience.
               recordStudentCheckIn(payload, studentId, studentName, "qr-camera");
               setValidationResult(result);
+            })
+            .catch(() => {
+              recordStudentCheckIn(payload, studentId, studentName, "qr-camera");
+              setValidationResult(result);
+            });
+        };
+
+        if (typeof navigator !== "undefined" && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              submitToServer(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
             },
             () => {
               setValidationResult({
@@ -75,7 +121,8 @@ export default function CheckInPage() {
           return;
         }
 
-        recordStudentCheckIn(result.payload, studentId, studentName, "qr-camera");
+        submitToServer(payload.latitude, payload.longitude);
+        return;
       }
 
       setValidationResult(result);

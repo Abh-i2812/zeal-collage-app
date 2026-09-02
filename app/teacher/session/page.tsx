@@ -23,6 +23,7 @@ import { QRCountdown } from "@/components/qr/QRCountdown";
 import { QRStatus } from "@/components/qr/QRStatus";
 import { exportSessionAttendanceToExcel } from "@/lib/excelExport";
 import { getLiveSession, setLiveSession, subscribeToLiveSession } from "@/lib/qr/liveSessionState";
+import { supabase } from "@/lib/supabase/client";
 
 export default function TeacherSessionPage() {
   const searchParams = useSearchParams();
@@ -30,6 +31,7 @@ export default function TeacherSessionPage() {
   const { showToast } = useToast();
 
   const subjectId = searchParams.get("sub") ?? "SUB001";
+  const classId = searchParams.get("class") ?? "";
   const room = searchParams.get("room") ?? "Room 304";
   const subject = getSubject(subjectId);
 
@@ -41,24 +43,61 @@ export default function TeacherSessionPage() {
   // Initialize roster from mockDb
   useEffect(() => {
     setMounted(true);
-    const liveSession = getLiveSession();
-    if (liveSession) {
-      setSession(liveSession);
-    }
     setRoster(getSessionRoster(subjectId));
+
+    const loadServerSession = async () => {
+      try {
+        const auth = supabase ? await supabase.auth.getSession() : null;
+        const headers: Record<string, string> = {};
+        if (auth?.data?.session?.access_token) headers.Authorization = `Bearer ${auth.data.session.access_token}`;
+        const query = classId ? `?classId=${encodeURIComponent(classId)}` : "";
+        const response = await fetch(`/api/teacher/session${query}`, { headers });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.session) {
+          setSession(data.session as AttendanceSession);
+          if (data.roster) setRoster(data.roster);
+          return;
+        }
+        const liveSession = getLiveSession();
+        if (liveSession) setSession(liveSession);
+      } catch {
+        const liveSession = getLiveSession();
+        if (liveSession) setSession(liveSession);
+      }
+    };
+    void loadServerSession();
 
     const unsubscribe = subscribeToLiveSession((liveSession) => {
       setSession(liveSession ?? null);
     });
 
     return unsubscribe;
-  }, [subjectId]);
+  }, [subjectId, classId]);
 
   // Sync roster with real localStorage attendance records every second
   useEffect(() => {
     if (!session) return;
 
     const interval = setInterval(() => {
+      const loadServerSession = async () => {
+        try {
+          const auth = supabase ? await supabase.auth.getSession() : null;
+          const headers: Record<string, string> = {};
+          if (auth?.data?.session?.access_token) headers.Authorization = `Bearer ${auth.data.session.access_token}`;
+          const query = classId ? `?classId=${encodeURIComponent(classId)}` : "";
+          const response = await fetch(`/api/teacher/session${query}`, { headers });
+          const data = await response.json().catch(() => null);
+          if (response.ok && data?.session) {
+            setSession(data.session as AttendanceSession);
+            if (data.roster) setRoster(data.roster);
+            return true;
+          }
+        } catch {
+          // Local fallback below remains the source of truth in demo mode.
+        }
+        return false;
+      };
+      void loadServerSession();
       const liveSession = getSessionById(session.sessionId);
       if (liveSession) {
         setSession(liveSession);
@@ -85,12 +124,38 @@ export default function TeacherSessionPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, classId]);
 
   const handleStartSession = () => {
     let latitude = 18.4485;
     let longitude = 73.834;
     let radiusM = 5;
+
+    const start = async (lat: number, lng: number) => {
+      try {
+        const auth = supabase ? await supabase.auth.getSession() : null;
+        const headers: Record<string, string> = { "content-type": "application/json" };
+        if (auth?.data?.session?.access_token) headers.Authorization = `Bearer ${auth.data.session.access_token}`;
+        const response = await fetch("/api/teacher/session", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ classId, subjectId, latitude: lat, longitude: lng, room, geofenceRadiusM: radiusM }),
+        });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.session) {
+          setSession(data.session as AttendanceSession);
+          setRoster(data.roster || getSessionRoster(subjectId));
+          showToast("Attendance session started on Supabase with a signed rotating QR.", "success");
+          return;
+        }
+      } catch {
+        // Fall through to the localStorage demo session.
+      }
+      const newSession = createAttendanceSession(subjectId, subject?.name ?? "Database Management Systems", "TCH001", room, lat, lng, radiusM);
+      setSession(newSession);
+      setLiveSession(newSession);
+      showToast("Attendance session started in offline demo mode.", "info");
+    };
 
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -98,63 +163,60 @@ export default function TeacherSessionPage() {
           latitude = pos.coords.latitude;
           longitude = pos.coords.longitude;
           radiusM = 5;
-          const newSession = createAttendanceSession(
-            subjectId,
-            subject?.name ?? "Database Management Systems",
-            "TCH001",
-            room,
-            latitude,
-            longitude,
-            radiusM
-          );
-          setSession(newSession);
-          setLiveSession(newSession);
-          showToast("Attendance session started with live room GPS lock (5m geofence).", "success");
+          void start(latitude, longitude);
         },
         () => {
-          const newSession = createAttendanceSession(
-            subjectId,
-            subject?.name ?? "Database Management Systems",
-            "TCH001",
-            room,
-            latitude,
-            longitude,
-            radiusM
-          );
-          setSession(newSession);
-          setLiveSession(newSession);
-          showToast("Attendance session started using default classroom GPS coordinates (5m geofence).", "success");
+          void start(latitude, longitude);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
       return;
     }
 
-    const newSession = createAttendanceSession(
-      subjectId,
-      subject?.name ?? "Database Management Systems",
-      "TCH001",
-      room,
-      latitude,
-      longitude,
-      radiusM
-    );
-    setSession(newSession);
-    setLiveSession(newSession);
-    showToast("Attendance session started. Real dynamic QR generated!", "success");
+    void start(latitude, longitude);
   };
 
   const handleRotate = useCallback(() => {
     if (!session || session.status !== "active") return;
-    const updated = rotateSessionToken(session.sessionId);
-    if (updated) {
-      setSession({ ...updated });
-      setLiveSession(updated);
-    }
+    const rotate = async () => {
+      try {
+        const auth = supabase ? await supabase.auth.getSession() : null;
+        const headers: Record<string, string> = { "content-type": "application/json" };
+        if (auth?.data?.session?.access_token) headers.Authorization = `Bearer ${auth.data.session.access_token}`;
+        const response = await fetch("/api/teacher/session", { method: "PATCH", headers, body: JSON.stringify({ sessionId: session.sessionId, action: "rotate" }) });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.session) {
+          setSession(data.session as AttendanceSession);
+          return;
+        }
+      } catch {
+        // use local fallback
+      }
+      const updated = rotateSessionToken(session.sessionId);
+      if (updated) {
+        setSession({ ...updated });
+        setLiveSession(updated);
+      }
+    };
+    void rotate();
   }, [session]);
 
-  const handleCloseSession = () => {
+  const handleCloseSession = async () => {
     if (!session) return;
+    try {
+      const auth = supabase ? await supabase.auth.getSession() : null;
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (auth?.data?.session?.access_token) headers.Authorization = `Bearer ${auth.data.session.access_token}`;
+      const response = await fetch("/api/teacher/session", { method: "PATCH", headers, body: JSON.stringify({ sessionId: session.sessionId, action: "close" }) });
+      if (response.ok) {
+        setSession({ ...session, status: "closed" });
+        setLiveSession(null);
+        showToast("Attendance session closed successfully.", "info");
+        return;
+      }
+    } catch {
+      // use local fallback
+    }
     const closed = closeAttendanceSession(session.sessionId);
     if (closed) {
       setSession({ ...closed });

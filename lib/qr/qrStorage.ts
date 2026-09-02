@@ -7,6 +7,7 @@ import { AttendanceSession, StoredAttendanceRecord } from "./qrTypes";
 export const SESSIONS_KEY = "zcoer_attendance_sessions";
 export const ATTENDANCE_KEY = "zcoer_attendance";
 export const DEVICE_ID_KEY = "zcoer_device_id";
+const DEVICE_COOKIE = "zcoer_device_id";
 
 // ── Device ID Management (for simulated multi-device detection) ───────
 export function getOrCreateDeviceId(): string {
@@ -17,6 +18,9 @@ export function getOrCreateDeviceId(): string {
       id = "dev-" + Math.random().toString(36).substring(2, 9) + "-" + Date.now().toString(36);
       localStorage.setItem(DEVICE_ID_KEY, id);
     }
+    // Mirroring in a cookie makes clearing localStorage alone insufficient to
+    // silently rotate the device identity on deployments that enforce binding.
+    document.cookie = `${DEVICE_COOKIE}=${encodeURIComponent(id)}; Max-Age=31536000; Path=/; SameSite=Lax`;
     return id;
   } catch {
     return "dev-fallback";

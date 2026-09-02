@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
         session_id: sessionId,
         student_id: studentId,
         status: "absent",
-        reject_reason: "Did not scan before session window closed",
+        source: "auto_absent",
+        reason_code: "session_window_closed",
       }));
 
       await supabase.from("attendance_records").insert(absentRows).catch(() => {});
